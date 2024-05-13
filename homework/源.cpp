@@ -5,6 +5,7 @@
 
 inline void putimage_alpha(int x, int y, IMAGE* img);
 
+//动画...定义成一个类,因为loadimage只能加载单张图像
 class Animation
 {
 public:
@@ -51,20 +52,94 @@ private:
 	std::vector<IMAGE*> frame_list;
 };
 
+class Player
+{
+public:
+	Player()
+	{
+		loadimage(&img_shadow, _T("img/shadow_player.png"));	
+		anim_left = new Animation(_T("img/player_left_%d.png"), 6, 45);
+		anim_right = new Animation(_T("img/player_right_%d.png"), 6, 45);
+	}
 
-int idx_current_anim = 0;		
+	~Player()
+	{
+		delete anim_left;
+		delete anim_right;
+	}
 
-const int PLAYER_ANIM_NUM = 6;
+	void ProcessEvent(const ExMessage&msg)
+	{
 
-const int PLAYER_SPEED = 3;
+	}
 
-IMAGE img_player_left[PLAYER_ANIM_NUM];
-IMAGE img_player_right[PLAYER_ANIM_NUM];
+	void Move()
+	{
+		int dir_x = is_move_right - is_move_left;
+		int dir_y = is_move_down - is_move_up;
+		double len_dir = sqrt(dir_x * dir_x + dir_y * dir_y);
+		//c++里^是位运算o,想要算幂的话,要么用pow,要么老老实实乘吧
+		if (len_dir != 0)
+		{
+			double normalized_x = dir_x / len_dir;
+			double normalized_y = dir_y / len_dir;
+			position.x += (int)(PLAYER_SPEED * normalized_x);
+			position.y += (int)(PLAYER_SPEED * normalized_y);
 
-POINT player_pos = { 500,500 };
+		}
+
+		if (position.x < 0)position.x = 0;
+		if (position.y < 0)position.y = 0;
+		if (position.x + PLAYER_WIDTH > WINDOW_WIDTH)position.x = WINDOW_WIDTH - PLAYER_WIDTH;
+		if (position.y + PLAYER_HEIGHT > WINDOW_HEIGHT)position.y = WINDOW_HEIGHT - PLAYER_HEIGHT;
+
+
+	}
+
+	void Draw(int delta)
+	{
+
+	}
+
+	
+private:	//常量
+
+	const int PLAYER_WIDTH = 80;	//角色的宽
+	const int PLAYER_HEIGHT = 80;	//角色的高
+	const int SHADOW_WIDTH = 32;	//阴影的宽
+	const int PLAYER_SPEED = 3;	//角色速度
+
+
+
+private:	//变量
+	Animation* anim_left;
+	Animation* anim_right;
+	IMAGE img_shadow;
+	POINT position = { 500,500 };
+	bool is_move_up = false;
+	bool is_move_down = false;
+	bool is_move_left = false;
+	bool is_move_right = false;
+
+};
+
+
+
+
+//窗口参数
+const int WINDOW_WIDTH = 1280;
+const int WINDOW_HEIGHT = 720;
+
+
+
+
+IMAGE img_background;
+
+
+
 
 #pragma comment(lib,"MSIMG32.LIB")
-
+//透明部分变成透明而不会绘制出黑的
 inline void putimage_alpha(int x, int y, IMAGE* img)
 {
 	int w = img->getwidth();
@@ -74,28 +149,15 @@ inline void putimage_alpha(int x, int y, IMAGE* img)
 
 }
 
-//void LoadAnimation()
-//{
-//	for (size_t i = 0; i < PLAYER_ANIM_NUM; i++)
-//	{
-//		std::wstring path = L"img/player_left_" + std::to_wstring(i) + L".png";
-//		loadimage(&img_player_left[i], path.c_str());
-//	}
-//	for (size_t i = 0; i < PLAYER_ANIM_NUM; i++)
-//	{
-//		std::wstring path = L"img/player_right_" + std::to_wstring(i) + L".png";
-//		loadimage(&img_player_right[i], path.c_str());
-//
-//	}
-//}
-
-
-Animation anim_left_player(_T("img/player_left_%d.png"), 6, 45);
-Animation anim_right_player(_T("img/player_right_%d.png"), 6, 45);
-IMAGE img_shadow;
-
+//绘制玩家及阴影
 void DrawPlayer(int delta, int dir_x)
 {
+	//使阴影水平居中
+	int pos_shadow_x = player_pos.x + (PLAYER_WIDTH / 2 - SHADOW_WIDTH / 2);
+	//使阴影竖直方向在脚底下
+	int pos_shadow_y = player_pos.y + PLAYER_HEIGHT - 8;
+	putimage_alpha(pos_shadow_x, pos_shadow_y, &img_shadow);
+
 	static bool facing_left = false;
 	 
 	if (dir_x < 0){	facing_left = true;}
@@ -120,17 +182,14 @@ int main()
 	bool running = true;
 
 	ExMessage msg;
-	IMAGE img_background;
+	
 
 
-	bool is_move_up = false;
-	bool is_move_down = false;
-	bool is_move_left = false;
-	bool is_move_right = false;
+
 
 	
 	loadimage(&img_background, _T("img/background.png"));
-	loadimage(&img_shadow, _T("img/shadow_player.png"));
+
 
 
 	BeginBatchDraw();
@@ -186,37 +245,12 @@ int main()
 		}
 
 
-		//处理数据
-		if (is_move_up == true) { player_pos.y -= PLAYER_SPEED; }
-		if (is_move_down == true) { player_pos.y += PLAYER_SPEED; }
-		if (is_move_left == true) { player_pos.x -= PLAYER_SPEED; }
-		if (is_move_right == true) { player_pos.x += PLAYER_SPEED; }
-
-
-
-		static int counter = 0;
-
-		if (++counter % 5 == 0)
-		{
-			idx_current_anim++;
-		}
-
-		//使动画循环播放
-		idx_current_anim = idx_current_anim % PLAYER_ANIM_NUM;
-		//???
-		//if (idx_current_anim == 6)
-		//{
-		//	idx_current_anim = 0;
-		//}
-
-
-								
-
+*
 		//绘制
 		cleardevice();
 
 		putimage(0, 0, &img_background);
-		putimage_alpha(player_pos.x,player_pos.y, &img_player_left[idx_current_anim]);
+		DrawPlayer(1000 / 144, is_move_right - is_move_left);
 		   
 		FlushBatchDraw();
 

@@ -1,5 +1,53 @@
 #include<graphics.h>
 #include<string>	
+#include<vector>
+
+
+class Animation
+{
+public:
+	Animation(LPCTSTR path,int num,int interval)
+	{
+		interval_ms = interval;
+
+		TCHAR path_file[256];
+		for (size_t i = 0; i < num; i++)
+		{
+			_stprintf_s(path_file, path, i);
+
+			IMAGE* frame = new IMAGE();
+			loadimage(frame, path_file);
+			frame_list.push_back(frame);
+		}
+	}
+	
+	~Animation()
+	{
+		for (size_t i = 0; i < frame_list.size(); i++)
+		{
+			delete frame_list[i];
+		}
+
+	}
+	
+	void Play(int x, int y, int delta)
+	{
+		timer += delta;
+		if (timer >= interval_ms)
+		{
+			idx_frame = (idx_frame + 1) % frame_list.size();
+			timer = 0;
+		}
+
+		putimage_alpha(x, y, frame_list[idx_frame]);
+	}
+private:
+	int timer = 0;     //计时器
+	int idx_frame = 0;//动画帧索引
+	int interval_ms = 0;
+	std::vector<IMAGE*> frame_list;
+};
+
 
 int idx_current_anim = 0;		
 
@@ -23,22 +71,48 @@ inline void putimage_alpha(int x, int y, IMAGE* img)
 
 }
 
-void LoadAnimation()
+//void LoadAnimation()
+//{
+//	for (size_t i = 0; i < PLAYER_ANIM_NUM; i++)
+//	{
+//		std::wstring path = L"img/player_left_" + std::to_wstring(i) + L".png";
+//		loadimage(&img_player_left[i], path.c_str());
+//	}
+//	for (size_t i = 0; i < PLAYER_ANIM_NUM; i++)
+//	{
+//		std::wstring path = L"img/player_right_" + std::to_wstring(i) + L".png";
+//		loadimage(&img_player_right[i], path.c_str());
+//
+//	}
+//}
+
+Animation anim_left_player(_T("img/player_left_%d.png"), 6, 45);
+Animation anim_right_player(_T("img/player_right_%d.png"), 6, 45);
+
+
+void DrawPlayer(int delta, int dir_x)
 {
-	for (size_t i = 0; i < PLAYER_ANIM_NUM; i++)
+	static bool facing_left = false;
+	if (dir_x < 0)
 	{
-		std::wstring path = L"img/player_left_" + std::to_wstring(i) + L".png";
-		loadimage(&img_player_left[i], path.c_str());
+		facing_left = true;
 	}
-	for (size_t i = 0; i < PLAYER_ANIM_NUM; i++)
+	else if (dir_x > 0)
 	{
-		std::wstring path = L"img/player_right_" + std::to_wstring(i) + L".png";
-		loadimage(&img_player_right[i], path.c_str());
+		facing_left = false;
+	}
+
+	if (facing_left)
+	{
+		anim_left_player.Play(player_pos.x, player_pos.y, delta);
+
+	}
+	else
+	{
+		anim_right_player.Play(player_pos.x, player_pos.y, delta);
 
 	}
 }
-
-
 
 int main()
 {
@@ -49,10 +123,16 @@ int main()
 
 	ExMessage msg;
 	IMAGE img_background;
+	IMAGE img_shadow;
 
-	LoadAnimation();
+	bool is_move_up = false;
+	bool is_move_down = false;
+	bool is_move_left = false;
+	bool is_move_right = false;
+
+	
 	loadimage(&img_background, _T("img/background.png"));
-
+	loadimage(&img_shadow, _T("img/shadow_player.png"));
 
 
 	BeginBatchDraw();
@@ -69,16 +149,35 @@ int main()
 				switch (msg.vkcode)
 				{
 				case VK_UP:
-					player_pos.y -= PLAYER_SPEED;
+					is_move_up=true;
 					break;
 				case VK_DOWN:
-					player_pos.y += PLAYER_SPEED;
+					is_move_down = true;
 					break;
 				case VK_LEFT:
-					player_pos.x -= PLAYER_SPEED;
+					is_move_left = true;
 					break;
 				case VK_RIGHT:
-					player_pos.x += PLAYER_SPEED;
+					is_move_right = true;
+					break;
+
+				}
+			}
+			else if(msg.message == WM_KEYUP)
+			{
+				switch (msg.vkcode)
+				{
+				case VK_UP:
+					is_move_up = false;
+					break;
+				case VK_DOWN:
+					is_move_down = false;
+					break;
+				case VK_LEFT:
+					is_move_left = false;
+					break;
+				case VK_RIGHT:
+					is_move_right = false;
 					break;
 
 				}
@@ -90,6 +189,13 @@ int main()
 
 
 		//处理数据
+		if (is_move_up == true) { player_pos.y -= PLAYER_SPEED; }
+		if (is_move_down == true) { player_pos.y += PLAYER_SPEED; }
+		if (is_move_left == true) { player_pos.x -= PLAYER_SPEED; }
+		if (is_move_right == true) { player_pos.x += PLAYER_SPEED; }
+
+
+
 		static int counter = 0;
 
 		if (++counter % 5 == 0)
@@ -106,14 +212,14 @@ int main()
 		//}
 
 
-
+								
 
 		//绘制
 		cleardevice();
 
 		putimage(0, 0, &img_background);
 		putimage_alpha(player_pos.x,player_pos.y, &img_player_left[idx_current_anim]);
-
+		   
 		FlushBatchDraw();
 
 

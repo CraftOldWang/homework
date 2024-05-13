@@ -3,6 +3,8 @@
 #include<vector>
 
 
+inline void putimage_alpha(int x, int y, IMAGE* img);
+
 class Animation
 {
 public:
@@ -30,6 +32,7 @@ public:
 
 	}
 	
+	//²¥·Å¶¯»­
 	void Play(int x, int y, int delta)
 	{
 		timer += delta;
@@ -86,26 +89,21 @@ inline void putimage_alpha(int x, int y, IMAGE* img)
 //	}
 //}
 
+
 Animation anim_left_player(_T("img/player_left_%d.png"), 6, 45);
 Animation anim_right_player(_T("img/player_right_%d.png"), 6, 45);
-
+IMAGE img_shadow;
 
 void DrawPlayer(int delta, int dir_x)
 {
 	static bool facing_left = false;
-	if (dir_x < 0)
-	{
-		facing_left = true;
-	}
-	else if (dir_x > 0)
-	{
-		facing_left = false;
-	}
+	 
+	if (dir_x < 0){	facing_left = true;}
+	else if (dir_x > 0)	{facing_left = false;}
 
 	if (facing_left)
 	{
 		anim_left_player.Play(player_pos.x, player_pos.y, delta);
-
 	}
 	else
 	{
@@ -123,7 +121,7 @@ int main()
 
 	ExMessage msg;
 	IMAGE img_background;
-	IMAGE img_shadow;
+
 
 	bool is_move_up = false;
 	bool is_move_down = false;

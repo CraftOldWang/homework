@@ -402,7 +402,7 @@ int main()
 
 		//绘制
 		cleardevice();
-		//似乎谁先绘制谁就会被后绘制的覆盖>如果有重叠的话
+		//似乎谁先绘制谁就会被后绘制的覆盖,如果有重叠的话
 
 		putimage(0, 0, &img_background);
 		player.Draw(1000 / 144);

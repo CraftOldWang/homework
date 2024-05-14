@@ -6,6 +6,7 @@
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
 
+//按钮参数
 const int BUTTON_WIDTH = 192;
 const int BUTTON_HEIGHT = 75;
 
@@ -14,6 +15,8 @@ const int BUTTON_HEIGHT = 75;
 
 bool is_game_started = false;
 bool running = true;
+
+
 
 //使得透明部分变成透明而不会绘制出黑色
 inline void putimage_alpha(int x, int y, IMAGE* img)
@@ -63,7 +66,7 @@ Atlas* atlas_enemy_left;
 Atlas* atlas_enemy_right;
 
 
-//动画...定义成一个类,因为loadimage只能加载单张图像
+
 class Animation
 {
 public:
@@ -116,8 +119,7 @@ public:
 		delete anim_right;
 	}
 
-	//这里把while换成了switch,会出什么事吗?
-	//这里的switch不需要default吗????为什么下面enemy写了?
+
 	void ProcessEvent(const ExMessage&msg)
 	{
 		switch(msg.message)
@@ -167,7 +169,6 @@ public:
 		int dir_x = is_move_right - is_move_left;
 		int dir_y = is_move_down - is_move_up;
 		double len_dir = sqrt(dir_x * dir_x + dir_y * dir_y);
-		//c++里^是位运算o,想要算幂的话,要么用pow,要么老老实实乘吧
 		if (len_dir != 0)
 		{
 			double normalized_x = dir_x / len_dir;
@@ -208,13 +209,13 @@ public:
 		
 	}
 
-	const POINT& GetPosion()const//前面的const &减少拷贝制造的资源浪费同时防止position在外面被修改,后面的const防止position在这个函数内被修改
+	const POINT& GetPosion()const
 	{
 		return position;
 	}
 
 	
-private:	//常量
+private:	
 
 	
 	const int SHADOW_WIDTH = 32;	//阴影的宽
@@ -222,7 +223,7 @@ private:	//常量
 
 
 
-private:	//变量
+private:	
 	Animation* anim_left;
 	Animation* anim_right;
 	IMAGE img_shadow;
@@ -342,7 +343,7 @@ public:
 		int dir_x = player.GetPosion().x - position.x;
 		int dir_y = player.GetPosion().y - position.y;
 		double len_dir = sqrt(dir_x * dir_x + dir_y * dir_y);
-		//c++里^是位运算o,想要算幂的话,要么用pow,要么老老实实乘吧
+	
 		if (len_dir != 0)
 		{
 			double normalized_x = dir_x / len_dir;
@@ -364,7 +365,6 @@ public:
 	{
 		//使阴影水平居中
 		int pos_shadow_x = position.x + (FRAME_WIDTH / 2 - SHADOW_WIDTH / 2);
-		//使阴影竖直方向在脚底下;比较矮,所以要-35而不是-8
 		int pos_shadow_y = position.y + FRAME_HEIGHT - 35;
 		putimage_alpha(pos_shadow_x, pos_shadow_y, &img_shadow);
 
@@ -377,7 +377,7 @@ public:
 	}
 
 
-private:	//常量...大概要有常量的字母全部大写的习惯
+private:	
 	 
 	const int FRAME_WIDTH = 80;	//敌人的宽
 	const int FRAME_HEIGHT = 80;	//敌人的高
@@ -386,7 +386,7 @@ private:	//常量...大概要有常量的字母全部大写的习惯
 
 
 
-private:	//变量
+private:	
 	Animation* anim_left;
 	Animation* anim_right;
 	IMAGE img_shadow;
@@ -415,7 +415,7 @@ public:
 	bool CheckCursorHit(int x,int y)
 	{
 		bool is_overlap_x = (x >= region.left) && (x <= region.right);
-		bool is_overlap_y = (y >= region.top) && (y <= region.bottom);//注意y轴正方向是向下,故top反而比bottom小
+		bool is_overlap_y = (y >= region.top) && (y <= region.bottom);
 		return is_overlap_x && is_overlap_y;
 	}
 
@@ -439,7 +439,7 @@ public:
 			if (status == Status::Pushed)
 				OnClick();
 			break;
-		default:	//不写default有什么风险吗?这里面似乎有个地方没写.
+		default:	
 			break;
 			
 		}
@@ -588,8 +588,6 @@ int main()
 	RECT region_btn_start_game, region_btn_quit_game;
 
 	region_btn_start_game.left = (WINDOW_WIDTH - BUTTON_WIDTH) / 2;
-
-	region_btn_start_game.left = (WINDOW_WIDTH - BUTTON_WIDTH) / 2;
 	region_btn_start_game.right = region_btn_start_game.left + BUTTON_WIDTH;
 	region_btn_start_game.top = 430; 
 	region_btn_start_game.bottom = region_btn_start_game.top + BUTTON_HEIGHT;
@@ -607,6 +605,7 @@ int main()
 
 	loadimage(&img_menu, _T("img/menu.png"));
 	loadimage(&img_background, _T("img/background.png"));
+
 
 	BeginBatchDraw();
 
@@ -683,14 +682,13 @@ int main()
 
 		//绘制
 		cleardevice();
-		//似乎谁先绘制谁就会被后绘制的覆盖,如果有重叠的话
 
 		if (is_game_started)
 		{
 			putimage(0, 0, &img_background);
 			player.Draw(1000 / 144);
 
-			for (Enemy* enemy : enemy_list)//why这里不可以const而下面bullets的就可以?....这里vector里存的是指针,下面那个存的是Bullet对象)...但还是不懂
+			for (Enemy* enemy : enemy_list)
 				enemy->Draw(1000 / 144);
 
 			for (const Bullet& bullet : bullet_list)

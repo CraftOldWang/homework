@@ -15,7 +15,7 @@ const int BUTTON_HEIGHT = 75;
 bool is_game_started = false;
 bool running = true;
 
-//使得透明部分变成透明而不会绘制出黑的
+//使得透明部分变成透明而不会绘制出黑色
 inline void putimage_alpha(int x, int y, IMAGE* img)
 {
 	int w = img->getwidth();
@@ -557,6 +557,7 @@ void DrawPlayerScore(int score)
 }
 
 
+
 int main()
 {
 
@@ -570,7 +571,7 @@ int main()
 
 	mciSendString(_T("open mus/bgm.mp3 alias bgm"), NULL, 0, NULL);
 	mciSendString(_T("open mus/hit.wav alias hit"), NULL, 0, NULL);
-	mciSendString(_T("open mus/what.mp3 alias what"), NULL, 0, NULL);
+
 
 	
 
@@ -645,11 +646,9 @@ int main()
 				if (enemy->CheckPlayerCollision(player))
 				{
 					static TCHAR text[128];
-					mciSendString(_T("play what from 0"), NULL, 0, NULL);
+
 					_stprintf_s(text, _T("最终得分: %d !"), score);
 					MessageBox(GetHWnd(), text, _T("GAME OVER"), MB_OK);
-					//MessageBox(GetHWnd(), _T("战败"),_T("GAME OVER"), MB_OK);
-					//MessageBox(GetHWnd(), _T("扣“1”观看战败cG"), _T("游戏结束"), MB_OK);
 					running = false;
 					break;
 				}

@@ -9,7 +9,6 @@ const int WINDOW_HEIGHT = 720;
 inline void putimage_alpha(int x, int y, IMAGE* img);
 
 
-
 //动画...定义成一个类,因为loadimage只能加载单张图像
 class Animation
 {
@@ -59,6 +58,10 @@ private:
 
 class Player
 {
+public:
+	const int FRAME_WIDTH = 80;		//角色的宽
+	const int FRAME_HEIGHT = 80;	//角色的高
+
 public:
 	Player()
 	{
@@ -165,7 +168,7 @@ public:
 		
 	}
 
-	POINT GetPosion()const
+	const POINT& GetPosion()const//前面的const &减少拷贝制造的资源浪费同时防止position在外面被修改,后面的const防止position在这个函数内被修改
 	{
 		return position;
 	}
@@ -173,8 +176,7 @@ public:
 	
 private:	//常量
 
-	const int FRAME_WIDTH = 80;		//角色的宽
-	const int FRAME_HEIGHT = 80;	//角色的高
+	
 	const int SHADOW_WIDTH = 32;	//阴影的宽
 	const int SPEED = 3;			//角色速度
 
@@ -208,6 +210,8 @@ public:
 		fillcircle(position.x, position.y, RADIUS);
 	}
 
+
+	
 private:
 	const int RADIUS = 10;
 
@@ -268,15 +272,30 @@ public:
 
 	bool CheckBulletCollision(const Bullet& bullet)
 	{
-	
-		return false;
+		bool is_overlap_x = (bullet.position.x >= position.x) && (bullet.position.x <= (position.x + FRAME_WIDTH));
+		bool is_overlap_y = (bullet.position.y >= position.y) && (bullet.position.y <= (position.y + FRAME_HEIGHT));
+		return is_overlap_x&&is_overlap_y;
 	}
 
 	bool CheckPlayerCollision(const Player& player)
 	{
-		
-		return false;
+		POINT check_position = { position.x + FRAME_WIDTH / 2,	position.y + FRAME_HEIGHT / 2 };
+		bool is_overlap_x = (check_position.x >= player.GetPosion().x) && (check_position.x <= (player.GetPosion().x + FRAME_WIDTH));
+		bool is_overlap_y = (check_position.y >= player.GetPosion().y )&& (check_position.y <= (player.GetPosion().y + FRAME_HEIGHT));
+		return is_overlap_x && is_overlap_y;
 	}
+
+	void Hurt()
+	{
+		alive = false;
+		
+	}
+
+	bool CheckAlive()
+	{
+		return alive;
+	}
+
 
 	void Move(const Player& player)
 	{
@@ -299,7 +318,6 @@ public:
 			facing_left = false;
 
 	}
-	
 
 	//绘制敌人及阴影
 	void Draw(int delta)
@@ -319,7 +337,7 @@ public:
 	}
 
 
-private:	//常量
+private:	//常量...大概要有常量的字母全部大写的习惯
 	 
 	const int FRAME_WIDTH = 80;	//敌人的宽
 	const int FRAME_HEIGHT = 80;	//敌人的高
@@ -334,13 +352,14 @@ private:	//变量
 	IMAGE img_shadow;
 	POINT position = { 0,0 };
 	bool facing_left = false;
-
+	bool alive = true;
 
 };
 
 
-
+#pragma comment(lib,"Winmm.lib")
 #pragma comment(lib,"MSIMG32.LIB")
+
 //使得透明部分变成透明而不会绘制出黑的
 inline void putimage_alpha(int x, int y, IMAGE* img)
 {
@@ -361,6 +380,33 @@ void TryGenerateEnemy(std::vector<Enemy*>& enemy_list)
 
 }
 
+void UpdateBullets(std::vector<Bullet>& bullet_list, const Player& player)
+{
+	const double RADIAL_SPEED = 0.0045;		//径向速度
+	const double TANGENT_SPEED = 0.0055;	//切向速度
+	double radian_interval = 2 * 3.14159 / bullet_list.size();	//子弹弧度间隔.
+	POINT player_position = player.GetPosion();
+	double radius = 100 + 25 * sin(GetTickCount() * RADIAL_SPEED);
+	for (size_t i = 0; i < bullet_list.size();i++)
+	{
+		double radian = GetTickCount() * TANGENT_SPEED + radian_interval * i;
+		bullet_list[i].position.x = player_position.x + player.FRAME_WIDTH / 2 + (int)(radius * sin(radian));
+		bullet_list[i].position.y = player_position.y + player.FRAME_HEIGHT / 2 + (int)(radius * cos(radian));
+
+	}
+
+
+}
+
+void DrawPlayerScore(int score)
+{
+	static TCHAR text[64];
+	_stprintf_s(text,_T("当前玩家得分: %d" ), score);
+
+	setbkmode(TRANSPARENT);
+	settextcolor(RGB(255, 85, 185));
+	outtextxy(10, 10, text);
+}
 
 
 int main()
@@ -368,12 +414,20 @@ int main()
 
 	initgraph(1280, 720);
 
+	mciSendString(_T("open mus/bgm.mp3 alias bgm"), NULL, 0, NULL);
+	mciSendString(_T("open mus/hit.wav alias hit"), NULL, 0, NULL);
+	mciSendString(_T("open mus/what.mp3 alias what"), NULL, 0, NULL);
+
+	mciSendString(_T("play bgm repeat from 0"), NULL, 0, NULL);
+
 	bool running = true;
 
+	int score = 0;
 	Player player;
 	ExMessage msg;
 	IMAGE img_background;
 	std::vector<Enemy*> enemy_list;
+	std::vector<Bullet> bullet_list(3);
 	
 	loadimage(&img_background, _T("img/background.png"));
 
@@ -392,11 +446,53 @@ int main()
 
 		//处理数据
 		player.Move();
+		UpdateBullets(bullet_list, player);
+
 		TryGenerateEnemy(enemy_list);
+
 		for (Enemy* enemy : enemy_list)
 			enemy->Move(player);
 
 
+		//检测敌人与玩家的碰撞
+		for (Enemy* enemy : enemy_list)
+		{
+			if (enemy->CheckPlayerCollision(player))
+			{
+				static TCHAR text[128];
+				mciSendString(_T("play what from 0"), NULL, 0, NULL);
+				_stprintf_s(text, _T("最终得分: %d !"), score);
+				MessageBox(GetHWnd(),text, _T("GAME OVER"), MB_OK);
+				//MessageBox(GetHWnd(), _T("战败"),_T("GAME OVER"), MB_OK);
+				//MessageBox(GetHWnd(), _T("扣“1”观看战败cG"), _T("游戏结束"), MB_OK);
+				running = false;
+				break;
+			}
+
+		}
+
+		//检测敌人与子弹的碰撞
+		for (Enemy* enemy : enemy_list)
+		{
+			for (const Bullet& bullet : bullet_list)
+				if (enemy->CheckBulletCollision(bullet))
+				{
+					mciSendString(_T("play hit from 0"), NULL, 0, NULL);
+					enemy->Hurt();
+					score++;
+				}
+		}
+
+		for (size_t i = 0; i < enemy_list.size(); i++)
+		{
+			Enemy* enemy = enemy_list[i];
+			if (!enemy->CheckAlive())
+			{
+				std::swap(enemy_list[i], enemy_list.back());
+				enemy_list.pop_back();
+				delete enemy;
+			}
+		}
 
 
 
@@ -406,10 +502,14 @@ int main()
 
 		putimage(0, 0, &img_background);
 		player.Draw(1000 / 144);
-		for (Enemy* enemy : enemy_list)
+
+		for ( Enemy* enemy : enemy_list)//why这里不可以const而下面bullets的就可以?....这里vector里存的是指针,下面那个存的是Bullet对象)...但还是不懂
 			enemy->Draw(1000/144);
 
+		for (const Bullet& bullet : bullet_list)
+			bullet.Draw();
 
+		DrawPlayerScore(score);
 
 		   
 		FlushBatchDraw();
